@@ -1,0 +1,39 @@
+name: Build boot.img for Omix X500
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout device tree repo
+        uses: actions/checkout@v4
+        with:
+          repository: twrpdtgen/android_device_omix_X500
+          path: device/omix/X500
+          ref: full_k69v1_64-user-11-RP1A.200720.011-1640161050-release-keys
+
+      - name: Setup repo and sync AOSP source
+        run: |
+          mkdir aosp && cd aosp
+          repo init -u https://android.googlesource.com/platform/manifest -b android-11.0.0_r60
+          repo sync -c -j2
+
+      - name: Copy device tree
+        run: |
+          cp -r device/omix/X500 aosp/device/omix/
+
+      - name: Build boot image
+        run: |
+          cd aosp
+          source build/envsetup.sh
+          lunch omni_X500-userdebug
+          mka bootimage -j$(nproc)
+
+      - name: Upload boot.img
+        uses: actions/upload-artifact@v3
+        with:
+          name: bootimg
+          path: aosp/out/target/product/X500/boot.img
